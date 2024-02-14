@@ -18,6 +18,10 @@ func (app *application) errorResponse(response http.ResponseWriter, request *htt
 	}
 }
 
+func (app *application) badRequestResponse(response http.ResponseWriter, request *http.Request, err error) {
+	app.errorResponse(response, request, http.StatusBadRequest, err.Error())
+}
+
 func (app *application) serverErrorResponse(response http.ResponseWriter, request *http.Request, err error) {
 
 	app.logError(request, err)
@@ -34,4 +38,8 @@ func (app *application) notFoundResponse(response http.ResponseWriter, request *
 func (app *application) methodNotAllowedResponse(response http.ResponseWriter, request *http.Request) {
 	message := fmt.Sprintf("the %s method is not supported for this resource", request.Method)
 	app.errorResponse(response, request, http.StatusMethodNotAllowed, message)
+}
+
+func (app *application) failedValidationResponse(response http.ResponseWriter, request *http.Request, errors map[string]string) {
+	app.errorResponse(response, request, http.StatusUnprocessableEntity, errors)
 }
