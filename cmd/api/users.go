@@ -57,9 +57,19 @@ func (app *application) registerUserHandler(response http.ResponseWriter, reques
 		return
 	}
 
+	app.background(func() {
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		if err != nil {
+			app.logger.PrintError(err, nil)
+		}
+	})
 	err = app.writeJSON(response, http.StatusCreated, envelope{"user": user}, nil)
 	if err != nil {
 		app.serverErrorResponse(response, request, err)
 	}
 
 }
+
+// {"name": "Alice Smith", "email": "alice@example.com", "password": "pa55word"}
+// {"name": "Bob Jones", "email": "bob@example.com", "password": "pa55word"}
+//{"name": "Carol Smith", "email": "carol@example.com", "password": "pa55word"}
