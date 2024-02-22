@@ -1,12 +1,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/Emmanuel-MacAnThony/greenlight/internal/data"
+	"github.com/Emmanuel-MacAnThony/greenlight/internal/validator"
 	"golang.org/x/time/rate"
 )
 
@@ -85,4 +89,53 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		}
 
 	})
+}
+
+func (app *application) authenticate(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+
+		response.Header().Add("Vary", "Authorization")
+
+		authorizationHeader := request.Header.Get("Authorization")
+
+		if authorizationHeader == "" {
+			request = app.contextSetUser(request, data.AnonymousUser)
+			next.ServeHTTP(response, request)
+			return
+		}
+
+		headerParts := strings.Split(authorizationHeader, " ")
+		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+			app.invalidAuthenticationTokenResponse(response, request)
+			return
+		}
+
+		token := headerParts[1]
+
+		v := validator.New()
+
+		if data.ValidateTokenPlaintext(v, token); !v.Valid() {
+			app.invalidAuthenticationTokenResponse(response, request)
+			return
+		}
+
+		user, err := app.models.Users.GetForToken(data.ScopeAuthentication, token)
+		if err != nil {
+			switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+			app.invalidAuthenticationTokenResponse(response, request)
+			default:
+				app.serverErrorResponse(response, request, err)
+			}
+
+			return
+		}
+
+	
+
+	request = app.contextSetUser(request, user)
+
+	next.ServeHTTP(response, request)
+})
 }
