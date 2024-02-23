@@ -124,7 +124,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		if err != nil {
 			switch {
 			case errors.Is(err, data.ErrRecordNotFound):
-			app.invalidAuthenticationTokenResponse(response, request)
+				app.invalidAuthenticationTokenResponse(response, request)
 			default:
 				app.serverErrorResponse(response, request, err)
 			}
@@ -132,10 +132,68 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			return
 		}
 
-	
+		request = app.contextSetUser(request, user)
 
-	request = app.contextSetUser(request, user)
+		next.ServeHTTP(response, request)
+	})
+}
 
-	next.ServeHTTP(response, request)
-})
+func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		user := app.contextGetUser(request)
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(response, request)
+			return
+		}
+		next.ServeHTTP(response, request)
+	})
+}
+
+func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
+
+	fn := http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+
+		user := app.contextGetUser(request)
+
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(response, request)
+			return
+		}
+
+		if !user.Activated {
+			app.inactiveAccountResponse(response, request)
+			return
+		}
+
+		next.ServeHTTP(response, request)
+
+	})
+
+	return app.requireAuthenticatedUser(fn)
+}
+
+func (app *application) requirePermission(code string, next http.HandlerFunc) http.HandlerFunc {
+
+	fn := func(response http.ResponseWriter, request *http.Request) {
+
+		user := app.contextGetUser(request)
+
+		permissions, err := app.models.Permissions.GetAllForUser(user.ID)
+
+		if err != nil {
+			app.serverErrorResponse(response, request, err)
+			return
+		}
+
+		if !permissions.Include(code) {
+			app.notPermittedResponse(response, request)
+			return
+		}
+
+		next.ServeHTTP(response, request)
+
+	}
+
+	return app.requireActivatedUser(fn)
+
 }
