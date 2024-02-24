@@ -2,15 +2,18 @@ package main
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Emmanuel-MacAnThony/greenlight/internal/data"
 	"github.com/Emmanuel-MacAnThony/greenlight/internal/validator"
+	"github.com/felixge/httpsnoop"
 	"golang.org/x/time/rate"
 )
 
@@ -228,6 +231,29 @@ func (app *application) enableCORS(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(response, request)
+
+	})
+}
+
+func (app *application) metrics(next http.Handler) http.Handler {
+
+	totalRequestReceived := expvar.NewInt("total_requests_received")
+	totalResponsesSent := expvar.NewInt("total_responses_sent")
+	totalProcessingTimeMicroseconds := expvar.NewInt("total_processing_time_μs")
+	totalResponsesSentByStatus := expvar.NewMap("total_responses_sent_by_status")
+
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+
+		//start := time.Now()
+		totalRequestReceived.Add(1)
+		metrics := httpsnoop.CaptureMetrics(next, response, request)
+
+		//next.ServeHTTP(response, request)
+
+		totalResponsesSent.Add(1)
+		//duration := time.Since(start).Microseconds()
+		totalProcessingTimeMicroseconds.Add(metrics.Duration.Microseconds())
+		totalResponsesSentByStatus.Add(strconv.Itoa(metrics.Code), 1)
 
 	})
 }
