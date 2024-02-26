@@ -183,7 +183,7 @@ func (app *application) deleteMovieHandler(response http.ResponseWriter, request
 
 }
 
-func (app application) listMoviesHandler(response http.ResponseWriter, request *http.Request) {
+func (app *application) listMoviesHandler(response http.ResponseWriter, request *http.Request) {
 
 	var input struct {
 		Title  string

@@ -58,13 +58,14 @@ type application struct {
 func main() {
 
 	var cfg config
+	var buildTime string
 
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
 	// godotenv package
 	DB_DSN := goDotEnvVariable("GREENLIGHT_DB_DSN", logger)
 
-	fmt.Println(DB_DSN)
+	//fmt.Println(DB_DSN)
 
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
@@ -91,7 +92,16 @@ func main() {
 		return nil
 	})
 
+	displayVersion := flag.Bool("version", false, "Display version and exit")
+
 	flag.Parse()
+
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		fmt.Printf("Build time:\t%s\n", buildTime)
+		os.Exit(0)
+
+	}
 
 	db, err := openDB(cfg)
 

@@ -18,8 +18,8 @@ type Models struct {
 		Delete(id int64) error
 		GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error)
 	}
-	Users  UserModel
-	Tokens TokenModel
+	Users       UserModel
+	Tokens      TokenModel
 	Permissions PermissionsModel
 }
 
@@ -28,8 +28,8 @@ func NewModels(db *sql.DB) Models {
 		Movies: MovieModel{
 			DB: db,
 		},
-		Users:  UserModel{DB: db},
-		Tokens: TokenModel{DB: db},
+		Users:       UserModel{DB: db},
+		Tokens:      TokenModel{DB: db},
 		Permissions: PermissionsModel{DB: db},
 	}
 }
